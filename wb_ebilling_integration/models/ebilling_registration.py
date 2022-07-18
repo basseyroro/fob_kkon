@@ -19,6 +19,7 @@ class WBRequestRegistration(models.Model):
                               ('invalid', 'Invalid'),
                               ('done','Done')], default='draft')
     active = fields.Boolean("Active", default=True)
+    process_message = fields.Char("Proceed Message")
 
     def wbRequestRegisration(self, vals={}):
         _logger.info("wbRequestRegisration Request {} {}".format(self, vals))
@@ -38,6 +39,14 @@ class WBRequestRegistration(models.Model):
             rtn_status, rtn_msg = self.wbSaleRequest(vals)
             response['msg'] = rtn_msg
             create_vals['name'] = 'sale'
+            if rtn_status:
+                create_vals['state'] = 'draft'
+                response['status'] = 1
+                create_vals['request'] = json.dumps(vals)
+        elif vals.get("name") == "auto_account_approval":
+            rtn_status, rtn_msg = self.wbPaymentApprovalRequest(vals)
+            response['msg'] = rtn_msg
+            create_vals['name'] = 'auto_account_approval'
             if rtn_status:
                 create_vals['state'] = 'draft'
                 response['status'] = 1
@@ -63,9 +72,6 @@ class WBRequestRegistration(models.Model):
 
         data = ['name','customerid', 'ebilling_ref', 'lines', 'date', 'no_of_paid_month']
         sub_lines = ['description', 'qty', 'price', 'uom', 'tax', 'product_id']
-
-        if vals.get("request", {}):
-            return False, "Invalid request payload."
 
         for data_key in data:
             if data_key not in vals:
@@ -112,6 +118,27 @@ class WBRequestRegistration(models.Model):
                     return False, "Tax {} not found.".format(sng_line.get("tax"))
         return True, "Registered successfully."
 
+    def wbPaymentApprovalRequest(self, vals):
+        # payload = {'orderid':123, 'amount':30, 'date':'2022-02-16 16:32:48'}
+        sale_obj = self.env['sale.order']
+        data = ['name', 'orderid', 'amount', 'date']
+        for data_key in data:
+            if data_key not in vals:
+                return False, "Invalid/Missing {} key.".format(data_key)
+            if not vals.get(data_key):
+                return False, "Empty {} key.".format(data_key)
+            if 'orderid' in vals:
+                if type(vals.get("orderid")) != type(1):
+                    return False, "orderid should be integer value."
+
+        if vals.get("orderid"):
+            sale = sale_obj.sudo().search([('id', '=', vals.get("orderid"))])
+            if not sale.exists():
+                return False, "Invalid orderid key value."
+            if sale.state not in ('draft', 'sent'):
+                return False, "Sale order already confirmed."
+        return True, "Registered successfully."
+
     def getProductList(self):
         return [{'id':prd.id, 'name':prd.name} for prd in
                 self.env['product.product'].search([('sale_ok', '=', True)])]
@@ -131,6 +158,21 @@ class WBRequestRegistration(models.Model):
         for rec in self_rec.filtered(lambda lm: lm.state == 'draft'):
             if rec.name == "sale" and not rec.sale_id:
                 rec.autoPostSaleOrder()
+            elif rec.name == "auto_account_approval":
+                rec.autoPostSaleApproval()
+
+    def autoPostSaleApproval(self):
+        sale_obj = self.env['sale.order']
+        payload = json.loads(self.request)
+        sale_id = sale_obj.search([('id', '=', payload.get("orderid"))])
+        if sale_id:
+            if sale_id.state in ('draft', 'sent'):
+                sale_id.action_confirm()
+                self.write({'state':'done', 'sale_id': sale_id.id})
+            else:
+                self.write({'state':'invalid', 'process_message':"It's already confirmed so didn't proceeds."})
+        else:
+            self.write({'state': 'invalid', 'process_message': "Sale order didn't found so didn't proceeds."})
 
     def autoPostSaleOrder(self):
         sale_obj = self.env['sale.order']
