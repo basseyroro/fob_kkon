@@ -28,7 +28,7 @@ class Sales(models.Model):
                 "order_erpid": "{}".format(self.id),
                 "firstname": "",
                 "lastname": "{}".format(self.partner_id.name),
-                "username": "{}".format(self.env.user.partner_id.name),
+                "username": "{}".format(self.x_studio_customer_id),
                 "company": "{}".format(self.company_id.name),
                 "address": "{} {}".format(self.partner_id.street, self.partner_id.street2),
                 "city": "{}".format(self.partner_id.city),
