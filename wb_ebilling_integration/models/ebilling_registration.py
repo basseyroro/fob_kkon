@@ -144,7 +144,7 @@ class WBRequestRegistration(models.Model):
                 self.env['product.product'].search([('sale_ok', '=', True)])]
 
     def getTaxList(self):
-        return [{'id': prd.id, 'name': prd.name} for prd in
+        return [{'id': prd.id, 'name': prd.name, 'company': prd.sudo().company_id.name} for prd in
                 self.env['account.tax'].search([('type_tax_use', '=', 'sale')])]
 
     def getUOMList(self):
