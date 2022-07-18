@@ -140,7 +140,7 @@ class WBRequestRegistration(models.Model):
         return True, "Registered successfully."
 
     def getCustomerList(self):
-        return [{'name':prd.display_name, 'id':prd.id} for prd in self.env['res.partner'].search([('id','>',5)])]
+        return [{'name':prd.display_name, 'id':prd.id} for prd in self.env['res.partner'].sudo().search([('id','>',5)])]
 
     def getProductList(self):
         return [{'id':prd.id, 'name':prd.name} for prd in
