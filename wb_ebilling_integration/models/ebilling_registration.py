@@ -170,7 +170,8 @@ class WBRequestRegistration(models.Model):
         sale_id = sale_obj.search([('id', '=', payload.get("orderid"))])
         if sale_id:
             if sale_id.x_studio_doc_status == "Awaiting Account Approval":
-                self.write({'state':'done', 'sale_id': sale_id.id, 'x_studio_doc_status':'Awaiting Sale Lead Closure'})
+                sale_id.write({'x_studio_doc_status':'Awaiting Sale Lead Closure'})
+                self.write({'state':'done', 'sale_id': sale_id.id})
             else:
                 self.write({'state':'invalid', 'process_message':"Doc state is not in Awaiting Account Approval state."})
         else:
