@@ -135,8 +135,8 @@ class WBRequestRegistration(models.Model):
             sale = sale_obj.sudo().search([('id', '=', vals.get("orderid"))])
             if not sale.exists():
                 return False, "Invalid orderid key value."
-            if sale.state not in ('draft', 'sent'):
-                return False, "Sale order already confirmed."
+            if sale.x_studio_doc_status != "Awaiting Account Approval":
+                return False, "Sale status is not awaiting account approval state."
         return True, "Registered successfully."
 
     def getCustomerList(self):
