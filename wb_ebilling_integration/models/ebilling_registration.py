@@ -169,11 +169,10 @@ class WBRequestRegistration(models.Model):
         payload = json.loads(self.request)
         sale_id = sale_obj.search([('id', '=', payload.get("orderid"))])
         if sale_id:
-            if sale_id.state in ('draft', 'sent'):
-                sale_id.action_confirm()
-                self.write({'state':'done', 'sale_id': sale_id.id})
+            if sale_id.x_studio_doc_status == "Awaiting Account Approval":
+                self.write({'state':'done', 'sale_id': sale_id.id, 'x_studio_doc_status':'Awaiting Sale Lead Closure'})
             else:
-                self.write({'state':'invalid', 'process_message':"It's already confirmed so didn't proceeds."})
+                self.write({'state':'invalid', 'process_message':"Doc state is not in Awaiting Account Approval state."})
         else:
             self.write({'state': 'invalid', 'process_message': "Sale order didn't found so didn't proceeds."})
 
