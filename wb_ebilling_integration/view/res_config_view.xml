@@ -35,6 +35,18 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-12 col-lg-6 o_setting_box" id="isupply_paidurl"
+                                title="Active your iSupply integration.">
+                                <div class="o_setting_left_pane">
+                                    <field name="wb_ebilling_paid_url"/>
+                                </div>
+                                <div class="o_setting_right_pane">
+                                    <label for="wb_ebilling_paid_url"/>
+                                    <div class="text-muted">
+                                        Add a uri for the paid eBilling
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </xpath>
                 </field>

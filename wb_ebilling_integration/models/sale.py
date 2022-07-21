@@ -10,6 +10,7 @@ class Sales(models.Model):
     is_integration_done = fields.Boolean("Is Integration Done?", copy=False)
     request_data = fields.Text("E-billing Request", copy=False)
     response_data = fields.Text("E-billing Response", copy=False)
+    paydate = fields.Datetime("Payment Date", copy=False)
 
     def action_confirm(self):
         rtn = super(Sales, self).action_confirm()
@@ -64,21 +65,42 @@ class Sales(models.Model):
                 if response_data.get("STATUS", 0) == 1 and "Success:" in response_data.get("MSG", ""):
                     self.is_integration_done = True
 
+    def postPaidBillingInvoice(self):
+        # this is going to create paid payload and send to ebilling.
+        if not self.is_new_customer:
+            return
+        req_obj = self.env['wb.request.registration']
+        req_obj.create({"name":"erp_sale_payment",
+                        "sale_id":self.id,
+                        "state":"draft",
+                        "request": json.dumps({"processedby": self.env.user.name,
+                                "erpid": "{}".format(self.partner_id.id),
+                                "company_id": "{}".format(self.company_id.id),
+                                "paydate": "{}".format(self.paydate),
+                                "orderno": self.name,
+                                "paid_amt": "{}".format(self.amount_total),
+                                "order_erpid": "{}".format(self.id),
+                                "tellerno": ""})
+                        })
+
 
 class ResConfig(models.TransientModel):
     _inherit = "res.config.settings"
 
-    wb_ebilling_token = fields.Char("E-Billing Token")
-    wb_ebilling_url = fields.Char("E-Billing URL")
+    wb_ebilling_token = fields.Char("E-Billing Token", default="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpZCI6ImVycCIsImVudHJ5Ijoid2Vic2VydmljZSEyMyojKiJ9.c_QQ9yylmC0kpkhtdYzaQ7iqOHZjWtN01zcVkXsUygyYSCPNWbtesaQkbVh2BNv7xRgph1Zql2Rs1qk6gtpjHQ")
+    wb_ebilling_url = fields.Char("E-Billing URL", default="https://eservice.fob.ng/apyerp2demo/public/erp/accinit")
+    wb_ebilling_paid_url = fields.Char("E-Billing Paid URL", default="https://eservice.fob.ng/apyerp2demo/public/erp/maninvpay")
 
     def set_values(self):
         super(ResConfig, self).set_values()
         self.env['ir.config_parameter'].sudo().set_param('wb_ebilling_integration.wb_ebilling_token', self.wb_ebilling_token)
         self.env['ir.config_parameter'].sudo().set_param('wb_ebilling_integration.wb_ebilling_url', self.wb_ebilling_url)
+        self.env['ir.config_parameter'].sudo().set_param('wb_ebilling_integration.wb_ebilling_paid_url', self.wb_ebilling_paid_url)
 
     @api.model
     def get_values(self):
         values = super(ResConfig, self).get_values()
         values['wb_ebilling_token'] = self.env['ir.config_parameter'].sudo().get_param('wb_ebilling_integration.wb_ebilling_token') or ''
         values['wb_ebilling_url'] = self.env['ir.config_parameter'].sudo().get_param('wb_ebilling_integration.wb_ebilling_url') or ''
+        values['wb_ebilling_paid_url'] = self.env['ir.config_parameter'].sudo().get_param('wb_ebilling_integration.wb_ebilling_paid_url') or ''
         return values

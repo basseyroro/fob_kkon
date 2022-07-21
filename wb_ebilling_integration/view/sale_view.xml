@@ -9,6 +9,7 @@
             <field name="arch" type="xml">
                 <field name="partner_shipping_id" position="after">
                     <field name="is_new_customer"/>
+                    <field name="paydate"/>
                 </field>
                 <xpath expr="//notebook" position="inside">
                     <page string="E-Billing" groups="base.group_no_one" attrs="{'invisible':[('is_new_customer','=',False)]}">

@@ -1,5 +1,6 @@
 import logging
 import json
+import requests
 from odoo import api, fields, models, _
 
 _logger = logging.getLogger(__name__)
@@ -10,7 +11,9 @@ class WBRequestRegistration(models.Model):
     _description = "E-Billing Request Registraiton List"
 
     name = fields.Selection([('sale','Sale'),
-                             ('auto_account_approval','Account Approval')],
+                             ('auto_account_approval','Account Approval'),
+                             ('erp_sale_payment','Sale Payment'),
+                             ],
                             )
     sale_id = fields.Many2one("sale.order", "Sale")
     request = fields.Text("Request")
@@ -163,6 +166,25 @@ class WBRequestRegistration(models.Model):
                 rec.autoPostSaleOrder()
             elif rec.name == "auto_account_approval":
                 rec.autoPostSaleApproval()
+            elif rec.name == "erp_sale_payment":
+                rec.autoPostPaidSaleApproval()
+
+    def autoPostPaidSaleApproval(self):
+        payload = json.loads(self.request)
+        wb_token = self.env['ir.config_parameter'].sudo().get_param(
+            'wb_ebilling_integration.wb_ebilling_token') or ''
+        wb_url = self.env['ir.config_parameter'].sudo().get_param(
+            'wb_ebilling_integration.wb_ebilling_paid_url') or ''
+        if not wb_token or not wb_url:
+            return
+        headers = {
+            'Authorization': 'Bearer {}'.format(wb_token),
+            'Content-Type': 'application/json'
+        }
+        # rst = requests.request("POST", wb_url, headers=headers, data="{}".format(json.dumps(payload)))
+        rst = requests.request("POST", wb_url, headers=headers, data="{}".format(self.request))
+        self.response = "{}".format(rst.text)
+        self.state = "done"
 
     def autoPostSaleApproval(self):
         sale_obj = self.env['sale.order']
@@ -214,3 +236,4 @@ class WBRequestRegistration(models.Model):
         )
         sale_id.action_confirm()
         self.write({"sale_id": sale_id.id, "state": "done"})
+
