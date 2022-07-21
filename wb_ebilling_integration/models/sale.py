@@ -18,6 +18,13 @@ class Sales(models.Model):
             self.postEBillingInvoice()
         return rtn
 
+    def write(self, vals):
+        rtn = super(Sales, self).write(vals)
+        if vals.get('x_studio_doc_status') == 'Awaiting Sale Lead Closure':
+            for rec in self:
+                rec.postPaidBillingInvoice()
+        return rtn
+
     def postEBillingInvoice(self):
         wb_token = self.env['ir.config_parameter'].sudo().get_param(
             'wb_ebilling_integration.wb_ebilling_token') or ''
